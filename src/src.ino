@@ -23,7 +23,7 @@ BleGamepad bleGamepad;
 int readChannel(int inputPin, int minRange, int maxRange, int defaultValue){
     int ch = pulseIn(inputPin, HIGH, 30000);
     if (ch < 100) return defaultValue;
-    int result=map(ch, 1000, 2000, minRange, maxRange);
+    int result=map(ch, 100, 2048, minRange, maxRange);
     Serial.println("Result of " + String(inputPin) + ": "+String(result));
     return result;
 }
