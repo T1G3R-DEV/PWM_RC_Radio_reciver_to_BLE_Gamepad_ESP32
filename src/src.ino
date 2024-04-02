@@ -1,14 +1,14 @@
 
 /*
 
-ESP32 project to turn RC PWM rerciver (eg Spectrum AR6115 in my case) to an PC Gamepad (using Atrduino IDE)
+ESP32 project to turn RC PWM rerciver (eg Spectrum AR6115 in my case) to an PC Gamepad (using Arduino IDE)
 https://github.com/T1G3R-DEV/PWM_RC_Radio_reciver_to_BLE_Gamepad_ESP32
 
 using following librarys: 
 ESP32-BLE-Gamepad (v0.5.4)
 NimBLE-Arduino (v1.4.1)
 
-
+1-8 axes
 
 
 */
@@ -16,14 +16,17 @@ NimBLE-Arduino (v1.4.1)
 #include <Arduino.h>
 #include <BleGamepad.h>
 
-
+const int ch_pins[8] = {15, 16, 17, 18, 19, 21, 0,0};
+//im using a slightly higher range to fully use the available range 
+#define MIN_DURATION 800    //minimum duration of the pwm (when stick is at fully down) (900 us for spectrum recivers)
+#define MAX_DURATION 2200   //maximum duration of pwm (2100 us for spectrum recivers)
 
 BleGamepad bleGamepad;
 
 int readChannel(int inputPin, int minRange, int maxRange, int defaultValue){
     int ch = pulseIn(inputPin, HIGH, 30000);
-    if (ch < 100) return defaultValue;
-    int result=map(ch, 100, 2048, minRange, maxRange);
+    if (ch < 1) return defaultValue;
+    int result=map(ch, MIN_DURATION, MAX_DURATION, minRange, maxRange); //min and max Range are for the output side of things eq ble controller takes values from 0 to 32767
     Serial.println("Result of " + String(inputPin) + ": "+String(result));
     return result;
 }
@@ -32,15 +35,11 @@ int readChannel(int inputPin, int minRange, int maxRange, int defaultValue){
 void setup()
 {
     Serial.begin(115200);
-
-    pinMode(15, INPUT);
-    pinMode(16, INPUT);
-    pinMode(17, INPUT);
-    pinMode(18, INPUT);
-    pinMode(19, INPUT);
-    pinMode(21, INPUT);
-
-    
+    for (int pin : ch_pins) 
+    {
+      pinMode(pin, INPUT);
+    }
+  
     Serial.println("Starting BLE work!");
     BleGamepadConfiguration bleGamepadConfig;
     bleGamepadConfig.setAutoReport(false); // This is true by default
@@ -49,22 +48,18 @@ void setup()
 
 }
 
-int ch0, ch1, ch2, ch3, ch4, ch5;
+int ch_values[8];
 
 void loop()
 {
     if (bleGamepad.isConnected())
     {
         Serial.println("Gampad connected");
-        
-        ch0 = readChannel(15, 0, 32767, 0);
-        ch1 = readChannel(16, 0, 32767, 0);
-        ch2 = readChannel(17, 0, 32767, 0);
-        ch3 = readChannel(18, 0, 32767, 0);
-        ch4 = readChannel(19, 0, 32767, 0);
-        ch5 = readChannel(21, 0, 32767, 0);
-
-        bleGamepad.setAxes(ch0, ch1, ch2, ch3, ch4, ch5, 0, 0);
+        for (int i=0; i<8; i++) 
+        {
+            ch_values[i] = readChannel(ch_pins[i], 0, 32767, 0);
+        }
+        bleGamepad.setAxes(ch_values[0], ch_values[1], ch_values[2], ch_values[3], ch_values[4], ch_values[5], ch_values[6], ch_values[7]);
         bleGamepad.sendReport();
     }
 }
